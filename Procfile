@@ -1,1 +1,1 @@
-web: python yes_or_no_bot.py
+web: python probability_bot.py

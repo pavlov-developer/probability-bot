@@ -29,35 +29,29 @@ dp = Dispatcher()
 @dp.message(CommandStart())
 async def cmd_start(msg: Message):
     await msg.answer(
-        f"🇷🇺: Привет, {msg.from_user.first_name}! Я бот Да/Нет.\n"
-        "Пришли что угодно — отвечу Да/Нет.\n\n"
-        f"🇬🇧: Hello, {msg.from_user.first_name}! I am a Yes/No bot.\n" 
-        "Send me anything — I will send Yes/No."
+        f"🇷🇺: Привет, {msg.from_user.first_name}! Я бот Вероятность.\n"
+        "Пришли что угодно — скажу вероятность.\n\n"
+        f"🇬🇧: Hello, {msg.from_user.first_name}! I am a Probability bot.\n" 
+        "Send me anything — I will send probability."
     )
 
 
 @dp.message(Command("help"))
 async def cmd_help(msg: Message):
     await msg.answer(
-        "🇷🇺: Это Да/Нет бот. Я отвечу Да или Нет на твоё сообщение.\n\n"
-        "🇬🇧: This is a Yes/No bot. I will answer Yes or No on your message."
+        "🇷🇺: Это Probability бот. Я отвечу вероятность на твоё сообщение.\n\n"
+        "🇬🇧: This is a Probability bot. I will calculate the probability for your message."
     )
 
 
 @dp.message()
-async def yes_or_no(msg: Message):
+async def probability(msg: Message):
     if msg.text:
-        choice = random.choice(["positive", "negative"])
-        if choice == "positive":
-            await msg.answer(
-                "🇷🇺: Да.\n\n"
-                "🇬🇧: Yes."
-            )
-        elif choice == "negative":
-            await msg.answer(
-                "🇷🇺: Нет.\n\n"
-                "🇬🇧: No."
-            )
+        num = random.randint(0, 100)
+        await msg.answer(
+            f"🇷🇺: Я думаю, что вероятность этого {num}%!\n\n"
+            f"🇬🇧: I think the probability of this is {num}%!"
+        )
     else:
         await msg.answer(
             "🇷🇺: Я принимаю только текстовые сообщения!\n\n"
