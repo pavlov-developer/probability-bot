@@ -15,6 +15,8 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 
 load_dotenv()
 
@@ -27,6 +29,10 @@ if not TOKEN:
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+
+class SetMaxStates(StatesGroup):
+    waiting_for_max_num = State()
+
 
 def keyboard_for_else():
     second_builder = InlineKeyboardBuilder()
@@ -70,10 +76,59 @@ async def cmd_help(msg: Message):
     )
 
 
+@dp.message(Command("stats"))
+async def cmd_stats(msg: Message, state: FSMContext):
+    data = await state.get_data()
+    count = data.get("count", 0)
+    await msg.answer(
+        f"🇷🇺: Ты отправил мне {count} сообщений.\n\n"
+        f"🇬🇧: You have sent me {count} messages."
+    )
+
+
+@dp.message(Command("set"))
+async def cmd_set(msg: Message, state: FSMContext):
+    await msg.answer(
+        "🇷🇺: Напиши число от 2 до 100 — это будет максимум вероятности.\n\n"
+        "🇬🇧: Send a number from 2 to 100 — it will be the max probability."  
+    )
+    await state.set_state(SetMaxStates.waiting_for_max_num)
+
+
+@dp.message(SetMaxStates.waiting_for_max_num)
+async def receive_max(msg: Message, state: FSMContext):
+    if not msg.text or not msg.text.isdigit():
+        await msg.answer(
+            "🇷🇺: Это не число! Попробуй ещё раз.\n\n"
+            "🇬🇧: That's not a number! Try again."
+        )
+        return
+
+    max_value = int(msg.text)
+    if not (2 <= max_value <= 100):
+        await msg.answer(
+            "🇷🇺: Число должно быть от 2 до 100!\n\n"
+            "🇬🇧: The number must be between 2 and 100!"
+        )
+        return
+
+    await state.update_data(max_value=max_value)
+    await state.set_state(None)
+    await msg.answer(
+        f"🇷🇺: Готово! Теперь вероятности будут от 0 до {max_value}%.\n\n"
+        f"🇬🇧: Done! Now probabilities go from 0 to {max_value}%."
+    )
+
+
 @dp.message()
-async def probability(msg: Message):
+async def probability(msg: Message, state: FSMContext):
     if msg.text:
-        num = random.randint(0, 100)
+        data = await state.get_data()
+        count = data.get("count", 0)
+        await state.update_data(count=count + 1)
+        max_value = data.get("max_value", 100)
+
+        num = random.randint(0, max_value)
         await msg.answer(
             f"🇷🇺: Я думаю, что вероятность этого {num}%!\n\n"
             f"🇬🇧: I think the probability of this is {num}%!",
@@ -97,9 +152,11 @@ async def write_text(callback: CallbackQuery):
 
 
 @dp.callback_query(F.data == "try_again")
-async def try_again(callback: CallbackQuery):
+async def try_again(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
-    num = random.randint(0, 100)
+    data = await state.get_data()
+    max_value = data.get("max_value", 100)
+    num = random.randint(0, max_value)
     try:
         await callback.message.edit_text(
             f"🇷🇺: Я думаю, что вероятность этого {num}%!\n\n"
