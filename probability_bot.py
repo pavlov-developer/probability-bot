@@ -61,9 +61,11 @@ def keyboard_for_start():
 async def cmd_start(msg: Message):
     await msg.answer(
         f"🇷🇺: Привет, {msg.from_user.first_name}! Я бот Вероятность.\n"
-        "Пришли что угодно — скажу вероятность.\n\n"
+        "Пришли что угодно — скажу вероятность.\n"
+        "Рекомендую воспользоваться командой /menu для комфортного пользования!\n\n"
         f"🇬🇧: Hello, {msg.from_user.first_name}! I am a Probability bot.\n" 
-        "Send me anything — I will send probability.",
+        "Send me anything — I will send probability."
+        "I recommend use command /menu for comfortable use!",
         reply_markup=keyboard_for_start()
     )
 
@@ -94,6 +96,19 @@ async def cmd_set(msg: Message, state: FSMContext):
     )
     await state.set_state(SetMaxStates.waiting_for_max_num)
 
+
+@dp.message(Command("menu"))
+async def cmd_menu(msg: Message):
+    await msg.answer(
+        "🇷🇺: Выбери действие:\n"
+        "/help  — узнать значение бота.\n"
+        "/stats  — узнать сколько написал сообщений, где спрашивал вероятность.\n"
+        "/set  — поменять максимальное число вероятности.\n"
+        "🇬🇧: Choose an action:"
+        "/help  — learn meaning bot.\n"
+        "/stats  — learn how many wrote messages, where asked probability.\n"
+        "/set  — change maximum number probability's.\n"
+    )
 
 @dp.message(SetMaxStates.waiting_for_max_num)
 async def receive_max(msg: Message, state: FSMContext):
