@@ -64,8 +64,8 @@ async def cmd_start(msg: Message):
         "Пришли что угодно — скажу вероятность.\n"
         "Рекомендую воспользоваться командой /menu для комфортного пользования!\n\n"
         f"🇬🇧: Hello, {msg.from_user.first_name}! I am a Probability bot.\n" 
-        "Send me anything — I will send probability."
-        "I recommend use command /menu for comfortable use!",
+        "Send me anything — I will calculate the probability.\n"
+        "I recommend using the /menu command for a better experience!",
         reply_markup=keyboard_for_start()
     )
 
@@ -91,8 +91,10 @@ async def cmd_stats(msg: Message, state: FSMContext):
 @dp.message(Command("set"))
 async def cmd_set(msg: Message, state: FSMContext):
     await msg.answer(
-        "🇷🇺: Напиши число от 2 до 100 — это будет максимум вероятности.\n\n"
-        "🇬🇧: Send a number from 2 to 100 — it will be the max probability."  
+        "🇷🇺: Напиши число от 2 до 100 — это будет максимум вероятности.\n"
+        "Если передумал, просто напиши 100 (сброс по умолчанию).\n\n"
+        "🇬🇧: Send a number from 2 to 100 — it will be the max probability."
+        "If you changed your mind, just send 100 (reset to default)."
     )
     await state.set_state(SetMaxStates.waiting_for_max_num)
 
@@ -101,13 +103,13 @@ async def cmd_set(msg: Message, state: FSMContext):
 async def cmd_menu(msg: Message):
     await msg.answer(
         "🇷🇺: Выбери действие:\n"
-        "/help  — узнать значение бота.\n"
-        "/stats  — узнать сколько написал сообщений, где спрашивал вероятность.\n"
+        "/help  — узнать, что делает бот.\n"
+        "/stats  — узнать сколько сообщений ты отправил.\n"
         "/set  — поменять максимальное число вероятности.\n"
         "🇬🇧: Choose an action:"
-        "/help  — learn meaning bot.\n"
-        "/stats  — learn how many wrote messages, where asked probability.\n"
-        "/set  — change maximum number probability's.\n"
+        "/help  — learn what the bot does.\n"
+        "/stats  — see how many messages you've sent.\n"
+        "/set  — change the maximum number probability limit.\n"
     )
 
 @dp.message(SetMaxStates.waiting_for_max_num)
