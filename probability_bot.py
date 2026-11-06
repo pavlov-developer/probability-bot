@@ -106,7 +106,7 @@ async def cmd_menu(msg: Message):
         "/help  — узнать, что делает бот.\n"
         "/stats  — узнать сколько сообщений ты отправил.\n"
         "/set  — поменять максимальное число вероятности.\n"
-        "🇬🇧: Choose an action:"
+        "🇬🇧: Choose an action:\n"
         "/help  — learn what the bot does.\n"
         "/stats  — see how many messages you've sent.\n"
         "/set  — change the maximum number probability limit.\n"
