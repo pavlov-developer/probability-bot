@@ -3,8 +3,6 @@ import sys
 import os
 import random
 
-from aiohttp import web
-
 from dotenv import load_dotenv
 
 if sys.platform.startswith('win'):
@@ -30,16 +28,34 @@ if not TOKEN:
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-class SetMaxStates(StatesGroup):
+class SetStates(StatesGroup):
     waiting_for_max_num = State()
+    waiting_for_echo = State()
+    waiting_for_yes_or_no = State()
 
 
-def keyboard_for_else():
-    second_builder = InlineKeyboardBuilder()
-    second_builder.button(text="🇷🇺 Написать текст", callback_data="write_text")
-    second_builder.button(text="🇬🇧 Write text", callback_data="write_text")
-    second_builder.adjust(2)
-    return second_builder.as_markup()
+def keyboard_for_menu():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🇷🇺 Меню", callback_data="menu")
+    builder.button(text="🇬🇧 Menu", callback_data="menu")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def keyboard_for_reset():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🇷🇺 Сбросить режим", callback_data="reset_mode")
+    builder.button(text="🇬🇧 Reset the mode", callback_data="reset_mode")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
+def keyboard_for_non_text_messages():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🇷🇺 Написать текст", callback_data="write_text")
+    builder.button(text="🇬🇧 Write text", callback_data="write_text")
+    builder.adjust(2)
+    return builder.as_markup()
 
 
 def keyboard_for_again():
@@ -93,10 +109,34 @@ async def cmd_set(msg: Message, state: FSMContext):
     await msg.answer(
         "🇷🇺: Напиши число от 2 до 100 — это будет максимум вероятности.\n"
         "Если передумал, просто напиши 100 (сброс по умолчанию).\n\n"
-        "🇬🇧: Send a number from 2 to 100 — it will be the max probability."
+        "🇬🇧: Send a number from 2 to 100 — it will be the max probability.\n"
         "If you changed your mind, just send 100 (reset to default)."
     )
-    await state.set_state(SetMaxStates.waiting_for_max_num)
+    await state.set_state(SetStates.waiting_for_max_num)
+
+
+@dp.message(Command("echo"))
+async def cmd_echo(msg: Message, state: FSMContext):
+    await msg.answer(
+        "🇷🇺: Готово! Теперь стоит эхо режим.\n"
+        "Если хотите вернуться в режим вероятности — нажмите кнопку сброса режима.\n\n"
+        "🇬🇧: Done! The echo mode is now enabled.\n"
+        "If you want to return to the probabilistic mode, press the mode reset button.",
+        reply_markup=keyboard_for_reset()
+    )
+    await state.set_state(SetStates.waiting_for_echo)
+
+
+@dp.message(Command("yes_or_no"))
+async def cmd_yes_or_no(msg: Message, state: FSMContext):
+    await msg.answer(
+        "🇷🇺: Готово! Теперь стоит режим Да/Нет.\n"
+        "Если хотите вернуться в режим вероятности — нажмите кнопку сброса режима.\n\n"
+        "🇬🇧: Done! The Yes/No mode is now enabled.\n"
+        "If you want to return to the probabilistic mode, press the mode reset button.",
+        reply_markup=keyboard_for_reset()
+    )
+    await state.set_state(SetStates.waiting_for_yes_or_no)
 
 
 @dp.message(Command("menu"))
@@ -106,13 +146,18 @@ async def cmd_menu(msg: Message):
         "/help  — узнать, что делает бот.\n"
         "/stats  — узнать сколько сообщений ты отправил.\n"
         "/set  — поменять максимальное число вероятности.\n"
+        "/echo — для режима эхо.\n"
+        "yes_or_no — для режима Да/Нет.\n\n"
         "🇬🇧: Choose an action:\n"
         "/help  — learn what the bot does.\n"
         "/stats  — see how many messages you've sent.\n"
         "/set  — change the maximum number probability limit.\n"
+        "/echo — for echo mode.\n"
+        "/yes_or_no — for Yes/No mode."
     )
 
-@dp.message(SetMaxStates.waiting_for_max_num)
+
+@dp.message(SetStates.waiting_for_max_num)
 async def receive_max(msg: Message, state: FSMContext):
     if not msg.text or not msg.text.isdigit():
         await msg.answer(
@@ -137,6 +182,40 @@ async def receive_max(msg: Message, state: FSMContext):
     )
 
 
+@dp.message(SetStates.waiting_for_echo)
+async def echo(msg: Message, state: FSMContext):
+    if msg.text:
+        await msg.answer(msg.text)
+    else:
+        await msg.answer(
+            "🇷🇺: Я принимаю только текстовые сообщения!\n\n"
+            "🇬🇧: I only accept text messages!",
+            reply_markup=keyboard_for_reset()
+        )
+
+
+@dp.message(SetStates.waiting_for_yes_or_no)
+async def yes_or_no(msg: Message, state: FSMContext):
+    if msg.text:
+        choice = random.choice(["positive", "negative"])
+        if choice == "positive":
+            await msg.answer(
+                "🇷🇺: Да.\n\n"
+                "🇬🇧: Yes."
+            )
+        elif choice == "negative":
+            await msg.answer(
+                "🇷🇺: Нет.\n\n"
+                "🇬🇧: No."
+            )
+    else:
+        await msg.answer(
+            "🇷🇺: Я принимаю только текстовые сообщения!\n\n"
+            "🇬🇧: I only accept text messages!",
+            reply_markup=keyboard_for_reset()
+        )
+
+
 @dp.message()
 async def probability(msg: Message, state: FSMContext):
     if msg.text:
@@ -155,7 +234,7 @@ async def probability(msg: Message, state: FSMContext):
         await msg.answer(
             "🇷🇺: Я принимаю только текстовые сообщения!\n\n"
             "🇬🇧: I only accept text messages!",
-            reply_markup=keyboard_for_else()
+            reply_markup=keyboard_for_non_text_messages()
         )
 
 
@@ -187,22 +266,38 @@ async def try_again(callback: CallbackQuery, state: FSMContext):
         )
 
 
-async def handle(request):
-    return web.Response(text="Bot is running")
+@dp.callback_query(F.data == "reset_mode")
+async def reset_mode(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.set_state(None)
+    await callback.message.answer(
+        "🇷🇺: Режим сброшен! Нажми на кнопку чтобы появилось меню.\n"
+        "🇬🇧: Mode reset! Click the button to open the menu.",
+        reply_markup=keyboard_for_menu()
+    )
+
+
+@dp.callback_query(F.data == "menu")
+async def menu(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await state.set_state(None)
+    await callback.message.answer(
+        "🇷🇺: Выбери действие:\n"
+        "/help  — узнать, что делает бот.\n"
+        "/stats  — узнать сколько сообщений ты отправил.\n"
+        "/set  — поменять максимальное число вероятности.\n"
+        "/echo — для режима эхо.\n"
+        "yes_or_no — для режима Да/Нет.\n\n"
+        "🇬🇧: Choose an action:\n"
+        "/help  — learn what the bot does.\n"
+        "/stats  — see how many messages you've sent.\n"
+        "/set  — change the maximum number probability limit.\n"
+        "/echo — for echo mode.\n"
+        "/yes_or_no — for Yes/No mode."
+    )
 
 
 async def main():
-    app = web.Application()
-    app.router.add_get("/", handle)
-    runner = web.AppRunner(app)
-    await runner.setup()
-
-    port = int(os.environ.get("PORT", 8080))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    print(f"Web server started on port {port}")
-
-    print("Bot is started and ready to work")
     await dp.start_polling(bot)
 
 
