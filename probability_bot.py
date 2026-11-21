@@ -2,7 +2,6 @@ import asyncio
 import sys
 import os
 import random
-import aiosqlite
 
 from dotenv import load_dotenv
 
@@ -98,8 +97,7 @@ async def cmd_help(msg: Message):
 
 
 @dp.message(Command("stats"))
-async def cmd_stats(msg: Message):
-    db: DataBase = msg.bot.dp["db"]
+async def cmd_stats(msg: Message, db: DataBase):
     await db.ensure_user(msg.from_user.id)
     count, _ = await db.get_users_stats(msg.from_user.id)
     await msg.answer(
@@ -162,7 +160,7 @@ async def cmd_menu(msg: Message):
 
 
 @dp.message(SetStates.waiting_for_max_num)
-async def receive_max(msg: Message, state: FSMContext):
+async def receive_max(msg: Message, state: FSMContext, db: DataBase):
     if not msg.text or not msg.text.isdigit():
         await msg.answer(
             "🇷🇺: Это не число! Попробуй ещё раз.\n\n"
@@ -178,7 +176,6 @@ async def receive_max(msg: Message, state: FSMContext):
         )
         return
 
-    db: DataBase = msg.bot.dp["db"]
     await db.ensure_user(msg.from_user.id)
     await db.set_max_value(msg.from_user.id, max_value)
 
@@ -225,7 +222,7 @@ async def yes_or_no(msg: Message, state: FSMContext):
 
 
 @dp.message()
-async def probability(msg: Message):
+async def probability(msg: Message, db: DataBase):
     if msg.text:
         db: DataBase = msg.bot.dp["db"]
         await db.ensure_user(msg.from_user.id)
@@ -257,7 +254,7 @@ async def write_text(callback: CallbackQuery):
 
 
 @dp.callback_query(F.data == "try_again")
-async def try_again(callback: CallbackQuery):
+async def try_again(callback: CallbackQuery, db: DataBase):
     await callback.answer()
 
     db: DataBase = callback.bot.dp["db"]
