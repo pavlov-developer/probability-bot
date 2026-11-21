@@ -2,6 +2,7 @@ import asyncio
 import sys
 import os
 import random
+import aiosqlite
 
 from dotenv import load_dotenv
 
@@ -15,6 +16,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
+
+from database import DataBase
 
 load_dotenv()
 
@@ -95,9 +98,10 @@ async def cmd_help(msg: Message):
 
 
 @dp.message(Command("stats"))
-async def cmd_stats(msg: Message, state: FSMContext):
-    data = await state.get_data()
-    count = data.get("count", 0)
+async def cmd_stats(msg: Message):
+    db: DataBase = msg.bot.dp["db"]
+    await db.ensure_user(msg.from_user.id)
+    count, _ = await db.get_users_stats(msg.from_user.id)
     await msg.answer(
         f"🇷🇺: Ты отправил мне {count} сообщений.\n\n"
         f"🇬🇧: You have sent me {count} messages."
@@ -174,8 +178,12 @@ async def receive_max(msg: Message, state: FSMContext):
         )
         return
 
-    await state.update_data(max_value=max_value)
+    db: DataBase = msg.bot.dp["db"]
+    await db.ensure_user(msg.from_user.id)
+    await db.set_max_value(msg.from_user.id, max_value)
+
     await state.set_state(None)
+
     await msg.answer(
         f"🇷🇺: Готово! Теперь вероятности будут от 0 до {max_value}%.\n\n"
         f"🇬🇧: Done! Now probabilities go from 0 to {max_value}%."
@@ -217,12 +225,13 @@ async def yes_or_no(msg: Message, state: FSMContext):
 
 
 @dp.message()
-async def probability(msg: Message, state: FSMContext):
+async def probability(msg: Message):
     if msg.text:
-        data = await state.get_data()
-        count = data.get("count", 0)
-        await state.update_data(count=count + 1)
-        max_value = data.get("max_value", 100)
+        db: DataBase = msg.bot.dp["db"]
+        await db.ensure_user(msg.from_user.id)
+        await db.increment_count(msg.from_user.id)
+        
+        _, max_value = await db.get_users_stats(msg.from_user.id)
 
         num = random.randint(0, max_value)
         await msg.answer(
@@ -248,10 +257,13 @@ async def write_text(callback: CallbackQuery):
 
 
 @dp.callback_query(F.data == "try_again")
-async def try_again(callback: CallbackQuery, state: FSMContext):
+async def try_again(callback: CallbackQuery):
     await callback.answer()
-    data = await state.get_data()
-    max_value = data.get("max_value", 100)
+
+    db: DataBase = callback.bot.dp["db"]
+    await db.ensure_user(callback.from_user.id)
+    _, max_value = await db.get_users_stats(callback.from_user.id)
+    
     num = random.randint(0, max_value)
     try:
         await callback.message.edit_text(
@@ -298,7 +310,17 @@ async def menu(callback: CallbackQuery, state: FSMContext):
 
 
 async def main():
-    await dp.start_polling(bot)
+    db = DataBase()
+
+    await db.connect()
+    await db.init_db()
+
+    dp["db"] = db
+
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await db.close()
 
 
 if __name__ == "__main__":
