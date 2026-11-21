@@ -224,7 +224,6 @@ async def yes_or_no(msg: Message, state: FSMContext):
 @dp.message()
 async def probability(msg: Message, db: DataBase):
     if msg.text:
-        db: DataBase = msg.bot.dp["db"]
         await db.ensure_user(msg.from_user.id)
         await db.increment_count(msg.from_user.id)
         
