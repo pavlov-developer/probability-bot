@@ -255,8 +255,7 @@ async def write_text(callback: CallbackQuery):
 @dp.callback_query(F.data == "try_again")
 async def try_again(callback: CallbackQuery, db: DataBase):
     await callback.answer()
-
-    db: DataBase = callback.bot.dp["db"]
+    
     await db.ensure_user(callback.from_user.id)
     _, max_value = await db.get_users_stats(callback.from_user.id)
     
