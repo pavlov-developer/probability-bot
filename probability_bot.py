@@ -229,7 +229,8 @@ async def cmd_menu(msg: Message, db: DataBase):
             "/stats  — узнать сколько сообщений ты отправил.\n"
             "/set  — поменять максимальное число вероятности.\n"
             "/echo — для режима эхо.\n"
-            "/yes_or_no — для режима Да/Нет."
+            "/yes_or_no — для режима Да/Нет.\n"
+            "/set_language — сменить язык (ru/en)."
         )
     else:
         await msg.answer(
@@ -238,7 +239,8 @@ async def cmd_menu(msg: Message, db: DataBase):
             "/stats  — see how many messages you've sent.\n"
             "/set  — change the maximum number probability limit.\n"
             "/echo — for echo mode.\n"
-            "/yes_or_no — for Yes/No mode."
+            "/yes_or_no — for Yes/No mode.\n"
+            "/set_language — change language (ru/en)."
         )
 
 
@@ -484,7 +486,8 @@ async def menu(callback: CallbackQuery, state: FSMContext, db: DataBase):
             "/stats  — узнать сколько сообщений ты отправил.\n"
             "/set  — поменять максимальное число вероятности.\n"
             "/echo — для режима эхо.\n"
-            "/yes_or_no — для режима Да/Нет."
+            "/yes_or_no — для режима Да/Нет.\n"
+            "/set_language — сменить язык (ru/en)."
         )
     else:
         await callback.message.answer(
@@ -493,7 +496,8 @@ async def menu(callback: CallbackQuery, state: FSMContext, db: DataBase):
             "/stats  — see how many messages you've sent.\n"
             "/set  — change the maximum number probability limit.\n"
             "/echo — for echo mode.\n"
-            "/yes_or_no — for Yes/No mode."
+            "/yes_or_no — for Yes/No mode.\n"
+            "/set_language — change language (ru/en)."
         )
 
 
