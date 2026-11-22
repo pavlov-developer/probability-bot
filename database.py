@@ -20,7 +20,7 @@ class DataBase:
                 language TEXT DEFAULT 'ru'
             )
         """)
-
+        await self.db.commit()
         try:
             await self.db.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'ru'")
             await self.db.commit()
@@ -47,6 +47,13 @@ class DataBase:
             (language, user_id)
         )
         await self.db.commit()
+
+    async def set_max_value(self, user_id: int, max_value: int):
+        await self.db.execute(
+            "UPDATE users SET max_value = ? WHERE user_id = ?",
+            (max_value, user_id)
+        )
+        await self.db.commit()
     
     async def get_language(self, user_id: int) -> str:
         async with self.db.execute(
@@ -55,8 +62,8 @@ class DataBase:
         ) as cursor:
             row = await cursor.fetchone()
             if row and row[0]:
-                return row
-            return row[0]
+                return row[0]
+            return "ru"
 
     async def get_users_stats(self, user_id: int) -> tuple[int, int]:
         async with self.db.execute(
