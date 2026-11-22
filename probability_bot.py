@@ -75,233 +75,426 @@ def keyboard_for_start():
     return builder.as_markup()
 
 
+def keyboard_for_set_language():
+    builder = InlineKeyboardBuilder()
+    builder.button(text="🇷🇺", callback_data="ru_language")
+    builder.button(text="🇬🇧", callback_data="en_language")
+    builder.adjust(2)
+    return builder.as_markup()
+
+
 @dp.message(CommandStart())
-async def cmd_start(msg: Message):
-    await msg.answer(
-        f"🇷🇺: Привет, {msg.from_user.first_name}! Я бот Вероятность.\n"
-        "Пришли что угодно — скажу вероятность.\n"
-        "Рекомендую воспользоваться командой /menu для комфортного пользования!\n\n"
-        f"🇬🇧: Hello, {msg.from_user.first_name}! I am a Probability bot.\n" 
-        "Send me anything — I will calculate the probability.\n"
-        "I recommend using the /menu command for a better experience!",
-        reply_markup=keyboard_for_start()
-    )
+async def cmd_start(msg: Message, db: DataBase):
+    await db.ensure_user(msg.from_user.id)
+
+    user_language = await db.get_language(msg.from_user.id)
+
+    if user_language == "ru":
+        lang_code = (msg.from_user.language_code or "").lower()
+        if lang_code not in ("ru", "uk", "be", "kk", "kz"):
+            user_language = "en"
+            await db.set_language(msg.from_user.id, user_language)
+
+    if user_language == "ru":
+        await msg.answer(
+            f"Привет, {msg.from_user.first_name}! Я бот Вероятность.\n"
+            "Пришли что угодно — скажу вероятность.\n"
+            "Используй /menu для комфортного пользования или /set_language для смены языка.\n\n",
+            reply_markup=keyboard_for_start()
+        )
+    else:  
+        await msg.answer(
+            f"Hello, {msg.from_user.first_name}! I am a Probability bot.\n" 
+            "Send me anything — I will calculate the probability.\n"
+            "Use /menu command for a better experience or /set_language to change language",
+            reply_markup=keyboard_for_start()
+        )
 
 
 @dp.message(Command("help"))
-async def cmd_help(msg: Message):
-    await msg.answer(
-        "🇷🇺: Это Probability бот. Я отвечу вероятность на твоё сообщение.\n\n"
-        "🇬🇧: This is a Probability bot. I will calculate the probability for your message."
-    )
+async def cmd_help(msg: Message, db: DataBase):
+    await db.ensure_user(msg.from_user.id)
+
+    language = await db.get_language(msg.from_user.id)
+
+    if language == "ru":
+        await msg.answer(
+            "Это Probability бот. Я отвечу вероятность на твоё сообщение."
+        )
+    else:
+        await msg.answer(
+            "This is a Probability bot. I will calculate the probability for your message."
+        )
 
 
 @dp.message(Command("stats"))
 async def cmd_stats(msg: Message, db: DataBase):
     await db.ensure_user(msg.from_user.id)
+
     count, _ = await db.get_users_stats(msg.from_user.id)
-    await msg.answer(
-        f"🇷🇺: Ты отправил мне {count} сообщений.\n\n"
-        f"🇬🇧: You have sent me {count} messages."
-    )
+    language = await db.get_language(msg.from_user.id)
+
+    if language == "ru":
+        await msg.answer(
+            f"Ты отправил мне {count} сообщений."
+        )
+    else:
+        await msg.answer(
+            f"You have sent me {count} messages."
+        )
 
 
 @dp.message(Command("set"))
-async def cmd_set(msg: Message, state: FSMContext):
-    await msg.answer(
-        "🇷🇺: Напиши число от 2 до 100 — это будет максимум вероятности.\n"
-        "Если передумал, просто напиши 100 (сброс по умолчанию).\n\n"
-        "🇬🇧: Send a number from 2 to 100 — it will be the max probability.\n"
-        "If you changed your mind, just send 100 (reset to default)."
-    )
+async def cmd_set(msg: Message, state: FSMContext, db: DataBase):
+    await db.ensure_user(msg.from_user.id)
+
+    language = await db.get_language(msg.from_user.id)
+
+    if language == "ru":
+        await msg.answer(
+        "Напиши число от 2 до 100 — это будет максимум вероятности.\n"
+        "Если передумал, просто напиши 100 (сброс по умолчанию)."
+        )
+    else:
+        await msg.answer(
+            "Send a number from 2 to 100 — it will be the max probability.\n"
+            "If you changed your mind, just send 100 (reset to default)."
+        )
+    
     await state.set_state(SetStates.waiting_for_max_num)
 
 
-@dp.message(Command("echo"))
-async def cmd_echo(msg: Message, state: FSMContext):
+@dp.message(Command("set_language"))
+async def set_language(msg: Message):
     await msg.answer(
-        "🇷🇺: Готово! Теперь стоит эхо режим.\n"
-        "Если хотите вернуться в режим вероятности — нажмите кнопку сброса режима.\n\n"
-        "🇬🇧: Done! The echo mode is now enabled.\n"
-        "If you want to return to the probabilistic mode, press the mode reset button.",
-        reply_markup=keyboard_for_reset()
+        "Выбери язык",
+        reply_markup=keyboard_for_set_language()
     )
+
+
+@dp.message(Command("echo"))
+async def cmd_echo(msg: Message, state: FSMContext, db: DataBase):
+    await db.ensure_user(msg.from_user.id)
+
+    language = await db.get_language(msg.from_user.id)
+
+    if language == "ru":
+        await msg.answer(
+            "🇷🇺: Готово! Теперь стоит эхо режим.\n"
+            "Если хотите вернуться в режим вероятности — нажмите кнопку сброса режима.",
+            reply_markup=keyboard_for_reset()
+        )
+    else:
+        await msg.answer(
+            "Done! The echo mode is now enabled.\n"
+            "If you want to return to the probabilistic mode, press the mode reset button.",
+            reply_markup=keyboard_for_reset()
+        )
+    
     await state.set_state(SetStates.waiting_for_echo)
 
 
 @dp.message(Command("yes_or_no"))
-async def cmd_yes_or_no(msg: Message, state: FSMContext):
-    await msg.answer(
-        "🇷🇺: Готово! Теперь стоит режим Да/Нет.\n"
-        "Если хотите вернуться в режим вероятности — нажмите кнопку сброса режима.\n\n"
-        "🇬🇧: Done! The Yes/No mode is now enabled.\n"
-        "If you want to return to the probabilistic mode, press the mode reset button.",
-        reply_markup=keyboard_for_reset()
-    )
+async def cmd_yes_or_no(msg: Message, state: FSMContext, db: DataBase):
+    await db.ensure_user(msg.from_user.id)
+
+    language = await db.get_language(msg.from_user.id)
+
+    if language == "ru":
+        await msg.answer(
+            "Готово! Теперь стоит режим Да/Нет.\n"
+            "Если хотите вернуться в режим вероятности — нажмите кнопку сброса режима.",
+            reply_markup=keyboard_for_reset()
+        )
+    else:
+        await msg.answer(
+            "🇬🇧: Done! The Yes/No mode is now enabled.\n"
+            "If you want to return to the probabilistic mode, press the mode reset button.",
+            reply_markup=keyboard_for_reset()
+        )
+    
     await state.set_state(SetStates.waiting_for_yes_or_no)
 
 
 @dp.message(Command("menu"))
-async def cmd_menu(msg: Message):
-    await msg.answer(
-        "🇷🇺: Выбери действие:\n"
-        "/help  — узнать, что делает бот.\n"
-        "/stats  — узнать сколько сообщений ты отправил.\n"
-        "/set  — поменять максимальное число вероятности.\n"
-        "/echo — для режима эхо.\n"
-        "/yes_or_no — для режима Да/Нет.\n\n"
-        "🇬🇧: Choose an action:\n"
-        "/help  — learn what the bot does.\n"
-        "/stats  — see how many messages you've sent.\n"
-        "/set  — change the maximum number probability limit.\n"
-        "/echo — for echo mode.\n"
-        "/yes_or_no — for Yes/No mode."
-    )
+async def cmd_menu(msg: Message, db: DataBase):
+    await db.ensure_user(msg.from_user.id)
+
+    language = await db.get_language(msg.from_user.id)
+
+    if language == "ru":
+        await msg.answer(
+            "Выбери действие:\n"
+            "/help  — узнать, что делает бот.\n"
+            "/stats  — узнать сколько сообщений ты отправил.\n"
+            "/set  — поменять максимальное число вероятности.\n"
+            "/echo — для режима эхо.\n"
+            "/yes_or_no — для режима Да/Нет."
+        )
+    else:
+        await msg.answer(
+            "Choose an action:\n"
+            "/help  — learn what the bot does.\n"
+            "/stats  — see how many messages you've sent.\n"
+            "/set  — change the maximum number probability limit.\n"
+            "/echo — for echo mode.\n"
+            "/yes_or_no — for Yes/No mode."
+        )
 
 
 @dp.message(SetStates.waiting_for_max_num)
 async def receive_max(msg: Message, state: FSMContext, db: DataBase):
+    await db.ensure_user(msg.from_user.id)
+    language = await db.get_language(msg.from_user.id)
+
     if not msg.text or not msg.text.isdigit():
-        await msg.answer(
-            "🇷🇺: Это не число! Попробуй ещё раз.\n\n"
-            "🇬🇧: That's not a number! Try again."
-        )
+        if language == "ru":
+            await msg.answer(
+                "Это не число! Попробуй ещё раз."
+            )
+        else:
+            await msg.answer(
+                "That's not a number! Try again."
+            )
         return
 
     max_value = int(msg.text)
     if not (2 <= max_value <= 100):
-        await msg.answer(
-            "🇷🇺: Число должно быть от 2 до 100!\n\n"
-            "🇬🇧: The number must be between 2 and 100!"
-        )
+        if language == "ru":
+            await msg.answer(
+                "Число должно быть от 2 до 100!"
+            )
+        else:
+            await msg.answer(
+                "The number must be between 2 and 100!"
+            )
         return
 
-    await db.ensure_user(msg.from_user.id)
     await db.set_max_value(msg.from_user.id, max_value)
 
     await state.set_state(None)
 
-    await msg.answer(
-        f"🇷🇺: Готово! Теперь вероятности будут от 0 до {max_value}%.\n\n"
-        f"🇬🇧: Done! Now probabilities go from 0 to {max_value}%."
-    )
+    if language == "ru":
+        await msg.answer(
+            f"Готово! Теперь вероятности будут от 0 до {max_value}%."
+        )
+    else:
+        await msg.answer(
+            f"Done! Now probabilities go from 0 to {max_value}%."
+        )
 
 
 @dp.message(SetStates.waiting_for_echo)
-async def echo(msg: Message, state: FSMContext):
+async def echo(msg: Message, state: FSMContext, db: DataBase):
+    await db.ensure_user(msg.from_user.id)
+
+    language = await db.get_language(msg.from_user.id)
+
     if msg.text:
         await msg.answer(msg.text)
     else:
-        await msg.answer(
-            "🇷🇺: Я принимаю только текстовые сообщения!\n\n"
-            "🇬🇧: I only accept text messages!",
-            reply_markup=keyboard_for_reset()
-        )
+        if language == "ru":
+            await msg.answer(
+                "Я принимаю только текстовые сообщения!",
+                reply_markup=keyboard_for_reset()
+            )
+        else:
+            await msg.answer(
+                "I only accept text messages!",
+                reply_markup=keyboard_for_reset()
+            )
 
 
 @dp.message(SetStates.waiting_for_yes_or_no)
-async def yes_or_no(msg: Message, state: FSMContext):
+async def yes_or_no(msg: Message, state: FSMContext, db: DataBase):
+    await db.ensure_user(msg.from_user.id)
+
+    language = await db.get_language(msg.from_user.id)
+
     if msg.text:
         choice = random.choice(["positive", "negative"])
         if choice == "positive":
-            await msg.answer(
-                "🇷🇺: Да.\n\n"
-                "🇬🇧: Yes."
-            )
+            if language == "ru":
+                await msg.answer(
+                    "Да."
+                )
+            else:
+                await msg.answer(
+                    "Yes."
+                )
         elif choice == "negative":
-            await msg.answer(
-                "🇷🇺: Нет.\n\n"
-                "🇬🇧: No."
-            )
+            if language == "ru":
+                await msg.answer(
+                    "Нет."
+                )
+            else:
+                await msg.answer(
+                    "No."
+                )
     else:
-        await msg.answer(
-            "🇷🇺: Я принимаю только текстовые сообщения!\n\n"
-            "🇬🇧: I only accept text messages!",
-            reply_markup=keyboard_for_reset()
-        )
+        if language == "ru":
+            await msg.answer(
+                "Я принимаю только текстовые сообщения!",
+                reply_markup=keyboard_for_reset()
+            )
+        else:
+            await msg.answer(
+                "I only accept text messages!",
+                reply_markup=keyboard_for_reset()
+            )
+
+
+@dp.callback_query(F.data == "ru_language")
+async def change_language_ru(callback: CallbackQuery, db: DataBase):
+    await callback.answer()
+
+    await db.ensure_user(callback.from_user.id)
+    await db.set_language(callback.from_user.id, "ru")
+
+    await callback.message.answer("Язык изменён на русский!")
+
+
+@dp.callback_query(F.data == "en_language")
+async def change_language_en(callback: CallbackQuery, db: DataBase):
+    await callback.answer()
+
+    await db.ensure_user(callback.from_user.id)
+    await db.set_language(callback.from_user.id, "en")
+
+    await callback.message.answer("Language changed to English!")
 
 
 @dp.message()
 async def probability(msg: Message, db: DataBase):
-    if msg.text:
-        await db.ensure_user(msg.from_user.id)
-        await db.increment_count(msg.from_user.id)
-        
-        _, max_value = await db.get_users_stats(msg.from_user.id)
+    await db.ensure_user(msg.from_user.id)
+ 
+    language = await db.get_language(msg.from_user.id)
 
+    if msg.text:
+        await db.increment_count(msg.from_user.id)
+        _, max_value = await db.get_users_stats(msg.from_user.id)
         num = random.randint(0, max_value)
-        await msg.answer(
-            f"🇷🇺: Я думаю, что вероятность этого {num}%!\n\n"
-            f"🇬🇧: I think the probability of this is {num}%!",
-            reply_markup=keyboard_for_again()
-        )
+
+        if language == "ru":
+            await msg.answer(
+                f"Я думаю, что вероятность этого {num}%!",
+                reply_markup=keyboard_for_again()
+            )
+        else:
+            await msg.answer(
+                f"I think the probability of this is {num}%!",
+                reply_markup=keyboard_for_again()
+            )
     else:
-        await msg.answer(
-            "🇷🇺: Я принимаю только текстовые сообщения!\n\n"
-            "🇬🇧: I only accept text messages!",
-            reply_markup=keyboard_for_non_text_messages()
-        )
+        if language == "ru":
+            await msg.answer(
+                "Я принимаю только текстовые сообщения!",
+                reply_markup=keyboard_for_non_text_messages()
+            )
+        else:
+            await msg.answer(
+                "I only accept text messages!",
+                reply_markup=keyboard_for_non_text_messages()
+            )
 
 
 @dp.callback_query(F.data == "write_text")
-async def write_text(callback: CallbackQuery):
+async def write_text(callback: CallbackQuery, db: DataBase):
     await callback.answer()
-    await callback.message.answer(
-        "🇷🇺: Напиши что-нибудь — и я скажу вероятность.\n\n"
-        "🇬🇧: Write something — and I'll tell you the probability."
-    )
+    await db.ensure_user(callback.from_user.id)
+
+    language = await db.get_language(callback.from_user.id)
+
+    if language == "ru":
+        await callback.message.answer(
+            "Напиши что-нибудь — и я скажу вероятность."
+        )
+    else:
+        await callback.message.answer(
+            "Write something — and I'll tell you the probability."
+        )
 
 
 @dp.callback_query(F.data == "try_again")
 async def try_again(callback: CallbackQuery, db: DataBase):
     await callback.answer()
-    
     await db.ensure_user(callback.from_user.id)
+
+    language = await db.get_language(callback.from_user.id)
+
     _, max_value = await db.get_users_stats(callback.from_user.id)
     
     num = random.randint(0, max_value)
     try:
-        await callback.message.edit_text(
-            f"🇷🇺: Я думаю, что вероятность этого {num}%!\n\n"
-            f"🇬🇧: I think the probability of this is {num}%!",
-            reply_markup=keyboard_for_again()
-        )
+        if language == "ru":
+            await callback.message.edit_text(
+                f"Я думаю, что вероятность этого {num}%!",
+                reply_markup=keyboard_for_again()
+            )
+        else:
+            await callback.message.edit_text(
+                f"I think the probability of this is {num}%!",
+                reply_markup=keyboard_for_again()
+            )
     except TelegramBadRequest:
-        await callback.answer(
-            "🇷🇺 Число не изменилось.\n\n"
-            "🇬🇧 The number hasn't changed."
-        )
+        if language == "ru":
+            await callback.answer(
+                "Число не изменилось."
+            )
+        else:
+            await callback.answer(
+                "The number hasn't changed."
+            )
 
 
 @dp.callback_query(F.data == "reset_mode")
-async def reset_mode(callback: CallbackQuery, state: FSMContext):
+async def reset_mode(callback: CallbackQuery, state: FSMContext, db: DataBase):
     await callback.answer()
+    await db.ensure_user(callback.from_user.id)
+
+    language = await db.get_language(callback.from_user.id)
+
     await state.set_state(None)
-    await callback.message.answer(
-        "🇷🇺: Режим сброшен! Нажми на кнопку чтобы появилось меню.\n"
-        "🇬🇧: Mode reset! Click the button to open the menu.",
-        reply_markup=keyboard_for_menu()
-    )
+
+    if language == "ru":
+        await callback.message.answer(
+            "Режим сброшен! Нажми на кнопку чтобы появилось меню.",
+            reply_markup=keyboard_for_menu()
+        )
+    else:
+        await callback.message.answer(
+            "Mode reset! Click the button to open the menu.",
+            reply_markup=keyboard_for_menu()
+        )
 
 
 @dp.callback_query(F.data == "menu")
-async def menu(callback: CallbackQuery, state: FSMContext):
+async def menu(callback: CallbackQuery, state: FSMContext, db: DataBase):
     await callback.answer()
+    await db.ensure_user(callback.from_user.id)
+
+    language = await db.get_language(callback.from_user.id)
+
     await state.set_state(None)
-    await callback.message.answer(
-        "🇷🇺: Выбери действие:\n"
-        "/help  — узнать, что делает бот.\n"
-        "/stats  — узнать сколько сообщений ты отправил.\n"
-        "/set  — поменять максимальное число вероятности.\n"
-        "/echo — для режима эхо.\n"
-        "/yes_or_no — для режима Да/Нет.\n\n"
-        "🇬🇧: Choose an action:\n"
-        "/help  — learn what the bot does.\n"
-        "/stats  — see how many messages you've sent.\n"
-        "/set  — change the maximum number probability limit.\n"
-        "/echo — for echo mode.\n"
-        "/yes_or_no — for Yes/No mode."
-    )
+
+    if language == "ru":
+        await callback.message.answer(
+            "Выбери действие:\n"
+            "/help  — узнать, что делает бот.\n"
+            "/stats  — узнать сколько сообщений ты отправил.\n"
+            "/set  — поменять максимальное число вероятности.\n"
+            "/echo — для режима эхо.\n"
+            "/yes_or_no — для режима Да/Нет."
+        )
+    else:
+        await callback.message.answer(
+            "Choose an action:\n"
+            "/help  — learn what the bot does.\n"
+            "/stats  — see how many messages you've sent.\n"
+            "/set  — change the maximum number probability limit.\n"
+            "/echo — for echo mode.\n"
+            "/yes_or_no — for Yes/No mode."
+        )
 
 
 async def main():
