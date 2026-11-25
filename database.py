@@ -27,12 +27,22 @@ class DataBase:
         except Exception:
             pass
 
-    async def ensure_user(self, user_id: int):
-        await self.db.execute(
-            "INSERT OR IGNORE INTO users (user_id) VALUES (?)",
+    async def ensure_user(self, user_id: int) -> bool:
+        cursor = await self.db.execute(
+            "SELECT user_id FROM users WHERE user_id = ?",
             (user_id,)
         )
-        await self.db.commit()
+        exists = await cursor.fetchone()
+
+        if not exists:
+            await self.db.execute(
+                "INSERT INTO users (user_id) VALUES (?)",
+                (user_id,)
+            )
+            await self.db.commit()
+            return True
+
+        return False
 
     async def increment_count(self, user_id: int):
         await self.db.execute(
