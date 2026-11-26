@@ -1,5 +1,6 @@
 import sys
 import os
+import random
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -10,7 +11,13 @@ from aiogram.fsm.context import FSMContext
 
 from database import DataBase
 from texts import TEXTS
-from handlers.keyboards import keyboard_for_start, keyboard_for_set_language, keyboard_for_reset
+from handlers.keyboards import ( 
+    keyboard_for_start,
+    keyboard_for_set_language,
+    keyboard_for_reset,
+    keyboard_for_again,
+    keyboard_for_non_text_messages
+)
 from states import SetStates
 
 router = Router()
@@ -127,3 +134,23 @@ async def cmd_menu(msg: Message, state: FSMContext, db: DataBase):
     await msg.answer(
         TEXTS[language]["menu"]
     )
+
+
+@router.message()
+async def probability(msg: Message, db: DataBase):
+    await db.ensure_user(msg.from_user.id)
+    language = await db.get_language(msg.from_user.id)
+
+    if msg.text:
+        await db.increment_count(msg.from_user.id)
+        _, max_value = await db.get_users_stats(msg.from_user.id)
+        num = random.randint(0, max_value)
+        await msg.answer(
+            TEXTS[language]["probability"].format(num=num),
+            reply_markup=keyboard_for_again(language)
+        )
+    else:
+        await msg.answer(
+            TEXTS[language]["text_only"],
+            reply_markup=keyboard_for_non_text_messages(language)
+        )
