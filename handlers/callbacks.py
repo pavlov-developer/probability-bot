@@ -14,7 +14,8 @@ from texts import TEXTS
 from handlers.keyboards import (
     keyboard_for_menu,
     keyboard_for_again,
-    keyboard_for_non_text_messages
+    keyboard_for_non_text_messages,
+    keyboard_for_reset
 )
 
 router = Router()
@@ -53,7 +54,8 @@ async def write_text(callback: CallbackQuery, db: DataBase):
     language = await db.get_language(callback.from_user.id)
 
     await callback.message.answer(
-        TEXTS[language]["write_text_prompt"]
+        TEXTS[language]["write_text_prompt"],
+        reply_markup=keyboard_for_reset(language)
     )
 
 
