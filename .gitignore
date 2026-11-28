@@ -3,3 +3,4 @@ venv/
 __pycache__/
 # Probability bot - ignore files
 *.db  
+bot.log

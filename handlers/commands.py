@@ -1,6 +1,7 @@
 import sys
 import os
 import random
+import logging
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -21,10 +22,13 @@ from handlers.keyboards import (
 from states import SetStates
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.message(CommandStart())
 async def cmd_start(msg: Message, state: FSMContext, db: DataBase):
+    logger.info(f"User {msg.from_user.id} started the bot")
+
     await state.set_state(None)
 
     is_new_user = await db.ensure_user(msg.from_user.id)
@@ -71,6 +75,8 @@ async def cmd_stats(msg: Message, db: DataBase):
 
 @router.message(Command("set"))
 async def cmd_set(msg: Message, state: FSMContext, db: DataBase):
+    logger.info(f"User {msg.from_user.id} requested /set")
+
     await db.ensure_user(msg.from_user.id)
 
     language = await db.get_language(msg.from_user.id)
@@ -84,6 +90,8 @@ async def cmd_set(msg: Message, state: FSMContext, db: DataBase):
 
 @router.message(Command("set_language"))
 async def set_language(msg: Message, db: DataBase):
+    logger.info(f"User {msg.from_user.id} requested language change")
+
     await db.ensure_user(msg.from_user.id)
     language = await db.get_language(msg.from_user.id)
 
@@ -95,6 +103,8 @@ async def set_language(msg: Message, db: DataBase):
 
 @router.message(Command("echo"))
 async def cmd_echo(msg: Message, state: FSMContext, db: DataBase):
+    logger.info(f"User {msg.from_user.id} enabled Echo mode")
+
     await db.ensure_user(msg.from_user.id)
 
     language = await db.get_language(msg.from_user.id)
@@ -110,6 +120,8 @@ async def cmd_echo(msg: Message, state: FSMContext, db: DataBase):
 
 @router.message(Command("yes_or_no"))
 async def cmd_yes_or_no(msg: Message, state: FSMContext, db: DataBase):
+    logger.info(f"User {msg.from_user.id} enabled Yes/No mode")
+
     await db.ensure_user(msg.from_user.id)
 
     language = await db.get_language(msg.from_user.id)
@@ -125,6 +137,8 @@ async def cmd_yes_or_no(msg: Message, state: FSMContext, db: DataBase):
 
 @router.message(Command("menu"))
 async def cmd_menu(msg: Message, state: FSMContext, db: DataBase):
+    logger.info(f"User {msg.from_user.id} requested /menu")
+
     await state.set_state(None)
 
     await db.ensure_user(msg.from_user.id)
@@ -138,6 +152,8 @@ async def cmd_menu(msg: Message, state: FSMContext, db: DataBase):
 
 @router.message()
 async def probability(msg: Message, db: DataBase):
+    logger.info(f"User {msg.from_user.id} sent a message")
+
     await db.ensure_user(msg.from_user.id)
     language = await db.get_language(msg.from_user.id)
 

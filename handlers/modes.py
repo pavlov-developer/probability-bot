@@ -1,6 +1,7 @@
 import sys
 import os
 import random
+import logging
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -14,6 +15,7 @@ from states import SetStates
 from handlers.keyboards import keyboard_for_reset, keyboard_for_non_text_messages
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.message(SetStates.waiting_for_max_num)
@@ -23,6 +25,7 @@ async def receive_max(msg: Message, state: FSMContext, db: DataBase):
     language = await db.get_language(msg.from_user.id)
 
     if not msg.text or not msg.text.isdigit():
+        logger.warning(f"User {msg.from_user.id} sent non-digit in /set mode: {msg.text}")
         await msg.answer(
             TEXTS[language]["not_number"]
         )
@@ -30,6 +33,7 @@ async def receive_max(msg: Message, state: FSMContext, db: DataBase):
 
     max_value = int(msg.text)
     if not (2 <= max_value <= 100):
+        logger.warning(f"User {msg.from_user.id} sent out-of-range number: {max_value}")
         await msg.answer(
             TEXTS[language]["invalid_range"]
         )
@@ -37,6 +41,8 @@ async def receive_max(msg: Message, state: FSMContext, db: DataBase):
 
     await db.set_max_value(msg.from_user.id, max_value)
     await state.set_state(None)
+
+    logger.info(f"User {msg.from_user.id} set max_value to {max_value}")
     await msg.answer(
         TEXTS[language]["max_changed"].format(max_value=max_value)
     )
@@ -54,6 +60,7 @@ async def echo(msg: Message, state: FSMContext, db: DataBase):
             reply_markup=keyboard_for_reset(language)
         )
     else:
+        logger.warning(f"User {msg.from_user.id} sent non-text in Echo mode")
         await msg.answer(
             TEXTS[language]["text_only"],
             reply_markup=keyboard_for_non_text_messages(language)
@@ -79,6 +86,7 @@ async def yes_or_no(msg: Message, state: FSMContext, db: DataBase):
                 reply_markup=keyboard_for_reset(language)
             )
     else:
+        logger.warning(f"User {msg.from_user.id} sent non-text in Yes/No mode")
         await msg.answer(
             TEXTS[language]["text_only"],
             reply_markup=keyboard_for_non_text_messages(language)

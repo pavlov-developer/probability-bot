@@ -1,6 +1,7 @@
 import sys
 import os
 import random
+import logging
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -19,11 +20,14 @@ from handlers.keyboards import (
 )
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 @router.callback_query(F.data == "ru_language")
 async def change_language_ru(callback: CallbackQuery, db: DataBase):
     await callback.answer()
+
+    logger.info(f"User {callback.from_user.id} changed language to RU")
 
     await db.ensure_user(callback.from_user.id)
     await db.set_language(callback.from_user.id, "ru")
@@ -36,6 +40,8 @@ async def change_language_ru(callback: CallbackQuery, db: DataBase):
 @router.callback_query(F.data == "en_language")
 async def change_language_en(callback: CallbackQuery, db: DataBase):
     await callback.answer()
+
+    logger.info(f"User {callback.from_user.id} changed language to EN")
 
     await db.ensure_user(callback.from_user.id)
     await db.set_language(callback.from_user.id, "en")
@@ -83,6 +89,8 @@ async def try_again(callback: CallbackQuery, db: DataBase):
 @router.callback_query(F.data == "reset_mode")
 async def reset_mode(callback: CallbackQuery, state: FSMContext, db: DataBase):
     await callback.answer()
+
+    logger.info(f"User {callback.from_user.id} reset mode")
 
     await db.ensure_user(callback.from_user.id)
 
